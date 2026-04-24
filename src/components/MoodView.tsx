@@ -10,6 +10,8 @@ interface Props {
   myDrawing: Drawing
   partnerDrawing: Drawing
   onDrawingChange: (drawing: Drawing) => void
+  partnerMoodLabel?: string
+  drawLabel?: string
 }
 
 export function MoodView({
@@ -18,13 +20,17 @@ export function MoodView({
   onMoodChange,
   myDrawing,
   partnerDrawing,
-  onDrawingChange
+  onDrawingChange,
+  partnerMoodLabel,
+  drawLabel
 }: Props) {
   return (
     <div className='space-y-6 animate-fade-in'>
       {/* Partner's Mood Card */}
       <div className='bg-card p-6 rounded-3xl shadow-sm border border-border-accent flex flex-col items-center'>
-        <span className='text-sm font-medium text-accent mb-2'>Her Mood</span>
+        <span className='text-sm font-medium text-accent mb-2'>
+          {partnerMoodLabel ?? "Partner's Mood"}
+        </span>
         <div className='text-6xl mb-2'>{partnerMood.emoji}</div>
         <span className='text-text-soft font-medium'>{partnerMood.label}</span>
         <DrawingPreview drawing={partnerDrawing} />
@@ -62,7 +68,7 @@ export function MoodView({
       </div>
 
       {/* Drawing Canvas */}
-      <DrawingCanvas drawing={myDrawing} onChange={onDrawingChange} />
+      <DrawingCanvas drawing={myDrawing} onChange={onDrawingChange} drawLabel={drawLabel} />
     </div>
   )
 }

@@ -39,6 +39,25 @@ export interface Stroke {
 
 export type Drawing = Stroke[]
 
+export type Gender = 'male' | 'female' | 'other'
+
+export const GENDER_OPTIONS: { key: Gender; emoji: string; label: string }[] = [
+  { key: 'female', emoji: '👩', label: 'Female' },
+  { key: 'male', emoji: '👨', label: 'Male' },
+  { key: 'other', emoji: '🧑', label: 'Other' }
+]
+
+export interface Profile {
+  id: string
+  display_name: string
+  mood_emoji: string
+  mood_label: string
+  drawing: Drawing
+  gender: Gender
+  partner_id: string | null
+  invite_code: string | null
+}
+
 export const SUGGESTIONS = [
   'eat strawberries in Eira',
   'take a quick walk',

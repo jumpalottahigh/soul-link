@@ -1,53 +1,151 @@
-import { useState, useEffect } from 'react'
-import { Heart, CalendarClock } from 'lucide-react'
-import { MOOD_OPTIONS, THEMES } from './lib/types'
-import type { MoodOption, Invite, Theme, Drawing } from './lib/types'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Heart, CalendarClock, Settings } from 'lucide-react'
+import { THEMES } from './lib/types'
+import type { MoodOption, Invite, Theme, Drawing, Gender } from './lib/types'
 import { get, set } from './lib/storage'
+import { supabase } from './lib/supabase'
+import { useAuth } from './contexts/AuthContext'
+import { updateMyMood, updateMyDrawing, updateMyGender } from './lib/db'
+import { AuthScreen } from './components/AuthScreen'
+import { PairingScreen } from './components/PairingScreen'
 import { MoodView } from './components/MoodView'
 import { InvitesView } from './components/InvitesView'
-
-// Toggle to true to mirror your drawing into the partner's mood card for testing
-const MIRROR_DRAWING = true
+import { SettingsModal } from './components/SettingsModal'
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'mood' | 'invites'>('mood')
+  const { session, profile, loading } = useAuth()
 
+  // Theme is always local
   const [theme, setTheme] = useState<Theme>(
     () => get<Theme>('theme') ?? 'default'
   )
-
-  const [myMood, setMyMood] = useState<MoodOption>(
-    () => get<MoodOption>('my-mood') ?? MOOD_OPTIONS[1]
-  )
-  const [partnerMood] = useState<MoodOption>(
-    () => get<MoodOption>('partner-mood') ?? MOOD_OPTIONS[0]
-  )
-  const [invites, setInvites] = useState<Invite[]>(
-    () => get<Invite[]>('invites') ?? []
-  )
-  const [myDrawing, setMyDrawing] = useState<Drawing>(
-    () => get<Drawing>('my-drawing') ?? []
-  )
-  const [partnerDrawing] = useState<Drawing>(
-    () => get<Drawing>('partner-drawing') ?? []
-  )
-
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     set('theme', theme)
   }, [theme])
 
-  useEffect(() => {
-    set('my-mood', myMood)
-  }, [myMood])
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-page flex items-center justify-center text-text font-sans'>
+        <h1 className='text-xl font-bold bg-gradient-to-r from-gradient-from to-gradient-to bg-clip-text text-transparent animate-pulse'>
+          Soul Link
+        </h1>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return <AuthScreen />
+  }
+
+  if (!profile?.partner_id) {
+    return <PairingScreen />
+  }
+
+  return <MainApp theme={theme} setTheme={setTheme} />
+}
+
+function MainApp({
+  theme,
+  setTheme
+}: {
+  theme: Theme
+  setTheme: (t: Theme) => void
+}) {
+  const { user, profile, partnerProfile } = useAuth()
+  const [activeTab, setActiveTab] = useState<'mood' | 'invites'>('mood')
+  const [showSettings, setShowSettings] = useState(false)
+
+  // Gender state
+  const [myGender, setMyGender] = useState<Gender>(profile!.gender ?? 'other')
+  const [partnerGender, setPartnerGender] = useState<Gender>(
+    partnerProfile!.gender ?? 'other'
+  )
+
+  function handleGenderChange(gender: Gender) {
+    setMyGender(gender)
+    updateMyGender(user!.id, gender).catch(console.error)
+  }
+
+  // Derive partner mood label from partner's gender
+  const partnerMoodLabel =
+    partnerGender === 'female'
+      ? 'Her Mood'
+      : partnerGender === 'male'
+        ? 'His Mood'
+        : "Partner's Mood"
+
+  // Mood state — initialized from Supabase profile
+  const [myMood, setMyMood] = useState<MoodOption>({
+    emoji: profile!.mood_emoji,
+    label: profile!.mood_label
+  })
+  const [partnerMood, setPartnerMood] = useState<MoodOption>({
+    emoji: partnerProfile!.mood_emoji,
+    label: partnerProfile!.mood_label
+  })
+
+  // Drawing state — initialized from Supabase profile
+  const [myDrawing, setMyDrawing] = useState<Drawing>(profile!.drawing ?? [])
+  const [partnerDrawing, setPartnerDrawing] = useState<Drawing>(
+    partnerProfile!.drawing ?? []
+  )
+
+  // Invites — still localStorage for now (Phase 5)
+  const [invites, setInvites] = useState<Invite[]>(
+    () => get<Invite[]>('invites') ?? []
+  )
 
   useEffect(() => {
     set('invites', invites)
   }, [invites])
 
+  // Mood change → optimistic update + DB write
+  function handleMoodChange(mood: MoodOption) {
+    setMyMood(mood)
+    updateMyMood(user!.id, mood).catch(console.error)
+  }
+
+  // Drawing change → optimistic update + debounced DB write
+  const drawingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleDrawingChange = useCallback(
+    (drawing: Drawing) => {
+      setMyDrawing(drawing)
+      if (drawingTimer.current) clearTimeout(drawingTimer.current)
+      drawingTimer.current = setTimeout(() => {
+        updateMyDrawing(user!.id, drawing).catch(console.error)
+      }, 500)
+    },
+    [user]
+  )
+
+  // Realtime: partner profile changes (mood + drawing)
   useEffect(() => {
-    set('my-drawing', myDrawing)
-  }, [myDrawing])
+    if (!partnerProfile?.id) return
+
+    const channel = supabase
+      .channel('partner-profile')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${partnerProfile.id}`
+        },
+        (payload) => {
+          const p = payload.new
+          setPartnerMood({ emoji: p.mood_emoji, label: p.mood_label })
+          setPartnerDrawing(p.drawing ?? [])
+          if (p.gender) setPartnerGender(p.gender)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [partnerProfile?.id])
 
   function cycleTheme() {
     const idx = THEMES.findIndex((t) => t.key === theme)
@@ -66,16 +164,31 @@ export default function App() {
               Soul Link
             </h1>
             <p className='text-xs text-text-soft font-medium'>
-              <em>Syncing with Her...</em>
+              <em>
+                {partnerGender === 'female'
+                  ? 'Syncing with Her...'
+                  : partnerGender === 'male'
+                    ? 'Syncing with Him...'
+                    : 'Syncing with Partner...'}
+              </em>
             </p>
           </div>
-          <button
-            onClick={cycleTheme}
-            className='w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center text-base transition-all hover:scale-105 active:scale-95'
-            title={currentTheme.label}
-          >
-            {currentTheme.icon}
-          </button>
+          <div className='flex items-center gap-2'>
+            <button
+              onClick={() => setShowSettings(true)}
+              className='w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center text-accent transition-all hover:scale-105 active:scale-95'
+              title='Settings'
+            >
+              <Settings size={16} />
+            </button>
+            <button
+              onClick={cycleTheme}
+              className='w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center text-base transition-all hover:scale-105 active:scale-95'
+              title={currentTheme.label}
+            >
+              {currentTheme.icon}
+            </button>
+          </div>
         </header>
 
         {/* Main Content */}
@@ -84,10 +197,19 @@ export default function App() {
             <MoodView
               myMood={myMood}
               partnerMood={partnerMood}
-              onMoodChange={setMyMood}
+              onMoodChange={handleMoodChange}
               myDrawing={myDrawing}
-              partnerDrawing={MIRROR_DRAWING ? myDrawing : partnerDrawing}
-              onDrawingChange={setMyDrawing}
+              partnerDrawing={partnerDrawing}
+              onDrawingChange={handleDrawingChange}
+              partnerName={partnerProfile?.display_name}
+              partnerMoodLabel={partnerMoodLabel}
+              drawLabel={
+                partnerGender === 'female'
+                  ? 'Draw for Her'
+                  : partnerGender === 'male'
+                    ? 'Draw for Him'
+                    : 'Draw for Partner'
+              }
             />
           ) : (
             <InvitesView invites={invites} onInvitesChange={setInvites} />
@@ -122,6 +244,14 @@ export default function App() {
           </button>
         </nav>
       </div>
+
+      {showSettings && (
+        <SettingsModal
+          gender={myGender}
+          onGenderChange={handleGenderChange}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   )
 }

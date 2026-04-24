@@ -5,9 +5,10 @@ import type { Drawing, Stroke, Point } from '../lib/types'
 interface Props {
   drawing: Drawing
   onChange: (drawing: Drawing) => void
+  drawLabel?: string
 }
 
-export function DrawingCanvas({ drawing, onChange }: Props) {
+export function DrawingCanvas({ drawing, onChange, drawLabel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isDrawing = useRef(false)
@@ -137,7 +138,7 @@ export function DrawingCanvas({ drawing, onChange }: Props) {
   return (
     <div className='bg-card-alt p-4 rounded-3xl border border-border-accent'>
       <div className='flex items-center justify-between mb-3'>
-        <span className='text-sm font-medium text-accent'>Draw for Her</span>
+        <span className='text-sm font-medium text-accent'>{drawLabel ?? 'Draw for Partner'}</span>
         {drawing.length > 0 && (
           <button
             onClick={() => onChange([])}
