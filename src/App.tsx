@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Heart, CalendarClock, Settings } from 'lucide-react'
-import { THEMES } from './lib/types'
 import type { MoodOption, Invite, Theme, Drawing, Gender } from './lib/types'
 import { get, set } from './lib/storage'
 import { supabase } from './lib/supabase'
 import { useAuth } from './contexts/AuthContext'
-import { updateMyMood, updateMyDrawing, updateMyGender } from './lib/db'
+import { updateMyMood, updateMyDrawing, updateMyGender, fetchInvites, mapDbInviteToInvite } from './lib/db'
 import { AuthScreen } from './components/AuthScreen'
 import { PairingScreen } from './components/PairingScreen'
 import { MoodView } from './components/MoodView'
@@ -52,7 +51,7 @@ function MainApp({
   theme: Theme
   setTheme: (t: Theme) => void
 }) {
-  const { user, profile, partnerProfile } = useAuth()
+  const { user, profile, partnerProfile, signOut } = useAuth()
   const [activeTab, setActiveTab] = useState<'mood' | 'invites'>('mood')
   const [showSettings, setShowSettings] = useState(false)
 
@@ -91,14 +90,48 @@ function MainApp({
     partnerProfile!.drawing ?? []
   )
 
-  // Invites — still localStorage for now (Phase 5)
-  const [invites, setInvites] = useState<Invite[]>(
-    () => get<Invite[]>('invites') ?? []
-  )
+  // Invites — fetched from Supabase
+  const [invites, setInvites] = useState<Invite[]>([])
 
+  // Fetch invites on mount
   useEffect(() => {
-    set('invites', invites)
-  }, [invites])
+    if (!user?.id) return
+    fetchInvites(user.id)
+      .then((rows) => setInvites(rows.map((r: any) => mapDbInviteToInvite(r, user.id))))
+      .catch(console.error)
+  }, [user?.id])
+
+  // Realtime: invites changes
+  useEffect(() => {
+    if (!user?.id) return
+
+    const channel = supabase
+      .channel('invites-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invites'
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const mapped = mapDbInviteToInvite(payload.new, user.id)
+            setInvites((prev) => [mapped, ...prev.filter((i) => i.id !== mapped.id)])
+          } else if (payload.eventType === 'UPDATE') {
+            const mapped = mapDbInviteToInvite(payload.new, user.id)
+            setInvites((prev) =>
+              prev.map((inv) => (inv.id === mapped.id ? mapped : inv))
+            )
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id])
 
   // Mood change → optimistic update + DB write
   function handleMoodChange(mood: MoodOption) {
@@ -147,13 +180,6 @@ function MainApp({
     }
   }, [partnerProfile?.id])
 
-  function cycleTheme() {
-    const idx = THEMES.findIndex((t) => t.key === theme)
-    setTheme(THEMES[(idx + 1) % THEMES.length].key)
-  }
-
-  const currentTheme = THEMES.find((t) => t.key === theme)!
-
   return (
     <div className='min-h-screen bg-page flex justify-center text-text font-sans'>
       <div className='w-full max-w-md bg-page relative h-screen flex flex-col shadow-2xl overflow-hidden sm:border-x sm:border-border'>
@@ -166,29 +192,23 @@ function MainApp({
             <p className='text-xs text-text-soft font-medium'>
               <em>
                 {partnerGender === 'female'
-                  ? 'Syncing with Her...'
+                  ? 'Linked with Her'
                   : partnerGender === 'male'
-                    ? 'Syncing with Him...'
-                    : 'Syncing with Partner...'}
+                    ? 'Linked with Him'
+                    : 'Linked with Partner'}
+                {partnerProfile?.display_name
+                  ? ` \u00b7 ${partnerProfile.display_name}`
+                  : ''}
               </em>
             </p>
           </div>
-          <div className='flex items-center gap-2'>
-            <button
-              onClick={() => setShowSettings(true)}
-              className='w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center text-accent transition-all hover:scale-105 active:scale-95'
-              title='Settings'
-            >
-              <Settings size={16} />
-            </button>
-            <button
-              onClick={cycleTheme}
-              className='w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center text-base transition-all hover:scale-105 active:scale-95'
-              title={currentTheme.label}
-            >
-              {currentTheme.icon}
-            </button>
-          </div>
+          <button
+            onClick={() => setShowSettings(true)}
+            className='w-9 h-9 rounded-full bg-accent-soft flex items-center justify-center text-accent transition-all hover:scale-105 active:scale-95'
+            title='Settings'
+          >
+            <Settings size={16} />
+          </button>
         </header>
 
         {/* Main Content */}
@@ -201,7 +221,6 @@ function MainApp({
               myDrawing={myDrawing}
               partnerDrawing={partnerDrawing}
               onDrawingChange={handleDrawingChange}
-              partnerName={partnerProfile?.display_name}
               partnerMoodLabel={partnerMoodLabel}
               drawLabel={
                 partnerGender === 'female'
@@ -212,7 +231,11 @@ function MainApp({
               }
             />
           ) : (
-            <InvitesView invites={invites} onInvitesChange={setInvites} />
+            <InvitesView
+              invites={invites}
+              userId={user!.id}
+              partnerId={profile!.partner_id!}
+            />
           )}
         </main>
 
@@ -236,10 +259,15 @@ function MainApp({
             onClick={() => setActiveTab('invites')}
             className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'invites' ? 'text-accent' : 'text-text-soft hover:text-text'}`}
           >
-            <CalendarClock
-              size={24}
-              className={activeTab === 'invites' ? 'fill-accent-soft' : ''}
-            />
+            <div className='relative'>
+              <CalendarClock
+                size={24}
+                className={activeTab === 'invites' ? 'fill-accent-soft' : ''}
+              />
+              {invites.some((i) => i.status === 'pending' && i.sender === 'partner') && (
+                <span className='absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card' />
+              )}
+            </div>
             <span className='text-[10px] font-medium'>Invites</span>
           </button>
         </nav>
@@ -249,6 +277,9 @@ function MainApp({
         <SettingsModal
           gender={myGender}
           onGenderChange={handleGenderChange}
+          theme={theme}
+          onThemeChange={setTheme}
+          onSignOut={signOut}
           onClose={() => setShowSettings(false)}
         />
       )}

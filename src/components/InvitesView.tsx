@@ -2,39 +2,40 @@ import { useState } from 'react'
 import { CalendarClock, Send, Check, X } from 'lucide-react'
 import { SUGGESTIONS } from '../lib/types'
 import type { Invite } from '../lib/types'
+import { createInvite, updateInviteStatus } from '../lib/db'
 
 interface Props {
   invites: Invite[]
-  onInvitesChange: (invites: Invite[]) => void
+  userId: string
+  partnerId: string
 }
 
-export function InvitesView({ invites, onInvitesChange }: Props) {
+export function InvitesView({ invites, userId, partnerId }: Props) {
   const [newActivity, setNewActivity] = useState('')
   const [newTime, setNewTime] = useState('')
+  const [sending, setSending] = useState(false)
 
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault()
-    if (!newActivity.trim()) return
+    if (!newActivity.trim() || sending) return
 
-    const invite: Invite = {
-      id: Date.now().toString(),
-      activity: newActivity,
-      time: newTime || 'Whenever!',
-      status: 'pending',
-      sender: 'me'
+    setSending(true)
+    try {
+      await createInvite(userId, partnerId, newActivity, newTime || 'Whenever!')
+      setNewActivity('')
+      setNewTime('')
+    } catch (err) {
+      console.error('Failed to send invite:', err)
     }
-
-    onInvitesChange([invite, ...invites])
-    setNewActivity('')
-    setNewTime('')
+    setSending(false)
   }
 
-  function handleResponse(id: string, newStatus: 'accepted' | 'declined') {
-    onInvitesChange(
-      invites.map((inv) =>
-        inv.id === id ? { ...inv, status: newStatus } : inv
-      )
-    )
+  async function handleResponse(id: string, newStatus: 'accepted' | 'declined') {
+    try {
+      await updateInviteStatus(id, newStatus)
+    } catch (err) {
+      console.error('Failed to update invite:', err)
+    }
   }
 
   return (
@@ -78,7 +79,7 @@ export function InvitesView({ invites, onInvitesChange }: Props) {
             />
             <button
               type='submit'
-              disabled={!newActivity.trim()}
+              disabled={!newActivity.trim() || sending}
               className='bg-accent text-white p-3 rounded-xl hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
             >
               <Send size={20} />
@@ -94,7 +95,7 @@ export function InvitesView({ invites, onInvitesChange }: Props) {
         </h3>
         {invites.length === 0 ? (
           <div className='text-center text-text-soft text-sm py-8'>
-            No invites yet. Send one to make her smile!
+            No invites yet. Send one!
           </div>
         ) : (
           invites.map((invite) => (
@@ -113,7 +114,7 @@ export function InvitesView({ invites, onInvitesChange }: Props) {
               </div>
 
               <div className='flex gap-2'>
-                {invite.status === 'pending' ? (
+                {invite.status === 'pending' && invite.sender === 'partner' ? (
                   <>
                     <button
                       onClick={() => handleResponse(invite.id, 'declined')}
@@ -128,6 +129,10 @@ export function InvitesView({ invites, onInvitesChange }: Props) {
                       <Check size={18} />
                     </button>
                   </>
+                ) : invite.status === 'pending' ? (
+                  <span className='text-xs font-medium px-3 py-1 rounded-full bg-muted text-muted-text'>
+                    Pending
+                  </span>
                 ) : (
                   <span
                     className={`text-xs font-medium px-3 py-1 rounded-full ${
