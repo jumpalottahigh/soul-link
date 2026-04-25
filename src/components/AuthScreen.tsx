@@ -25,7 +25,7 @@ export function AuthScreen() {
   }
 
   return (
-    <div className='min-h-screen bg-page flex items-center justify-center p-6 text-text font-sans'>
+    <div className='h-screen bg-page flex items-center justify-center p-6 text-text font-sans overflow-hidden'>
       <div className='w-full max-w-sm'>
         <div className='text-center mb-8'>
           <h1 className='text-3xl font-bold bg-gradient-to-r from-gradient-from to-gradient-to bg-clip-text text-transparent'>
