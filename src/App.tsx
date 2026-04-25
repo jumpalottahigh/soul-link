@@ -24,7 +24,11 @@ export default function App() {
 
   // Theme is always local
   const [theme, setTheme] = useState<Theme>(
-    () => get<Theme>('theme') ?? 'default'
+    () =>
+      get<Theme>('theme') ??
+      (window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'default')
   )
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
