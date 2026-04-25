@@ -67,6 +67,14 @@ export async function updateMyGender(userId: string, gender: Gender) {
   if (error) throw error
 }
 
+export async function updateDisplayName(userId: string, displayName: string) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ display_name: displayName, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+  if (error) throw error
+}
+
 // --- Pairing ---
 
 export function generatePairCode(): string {

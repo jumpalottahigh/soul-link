@@ -101,6 +101,8 @@ export function MoodView({
         onChange={onDrawingChange}
         drawLabel={drawLabel}
       />
+
+      <div className='h-20' />
     </div>
   )
 }

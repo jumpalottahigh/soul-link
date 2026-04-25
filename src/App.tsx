@@ -8,6 +8,7 @@ import {
   updateMyMood,
   updateMyDrawing,
   updateMyGender,
+  updateDisplayName,
   fetchInvites,
   mapDbInviteToInvite,
   addToRecentMoods
@@ -20,7 +21,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { CustomMoodModal } from './components/CustomMoodModal'
 
 export default function App() {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, partnerProfile, loading } = useAuth()
 
   // Theme is always local
   const [theme, setTheme] = useState<Theme>(
@@ -49,7 +50,7 @@ export default function App() {
     return <AuthScreen />
   }
 
-  if (!profile?.partner_id) {
+  if (!profile?.partner_id || !partnerProfile) {
     return <PairingScreen />
   }
 
@@ -74,6 +75,14 @@ function MainApp({
     partnerProfile!.gender ?? 'other'
   )
 
+  // Display name state
+  const [displayName, setDisplayName] = useState(profile!.display_name ?? '')
+
+  function handleDisplayNameChange(name: string) {
+    setDisplayName(name)
+    updateDisplayName(user!.id, name).catch(console.error)
+  }
+
   function handleGenderChange(gender: Gender) {
     setMyGender(gender)
     updateMyGender(user!.id, gender).catch(console.error)
@@ -89,12 +98,12 @@ function MainApp({
 
   // Mood state — initialized from Supabase profile
   const [myMood, setMyMood] = useState<MoodOption>({
-    emoji: profile!.mood_emoji,
-    label: profile!.mood_label
+    emoji: profile!.mood_emoji || '❓',
+    label: profile!.mood_label || 'Pick a mood below!'
   })
   const [partnerMood, setPartnerMood] = useState<MoodOption>({
-    emoji: partnerProfile!.mood_emoji,
-    label: partnerProfile!.mood_label
+    emoji: partnerProfile!.mood_emoji || '❓',
+    label: partnerProfile!.mood_label || 'No mood yet'
   })
   const [recentMoods, setRecentMoods] = useState<MoodOption[]>(
     profile!.recent_moods ?? []
@@ -196,8 +205,12 @@ function MainApp({
         },
         (payload) => {
           const p = payload.new
-          setPartnerMood({ emoji: p.mood_emoji, label: p.mood_label })
-          setPartnerDrawing(p.drawing ?? [])
+          if (p.mood_emoji !== undefined) {
+            setPartnerMood({ emoji: p.mood_emoji || '❓', label: p.mood_label || 'No mood yet' })
+          }
+          if (p.drawing !== undefined) {
+            setPartnerDrawing(p.drawing ?? [])
+          }
           if (p.gender) setPartnerGender(p.gender)
         }
       )
@@ -212,7 +225,7 @@ function MainApp({
     <div className='min-h-screen bg-page flex justify-center text-text font-sans'>
       <div className='w-full max-w-md bg-page relative h-screen flex flex-col shadow-2xl overflow-hidden sm:border-x sm:border-border'>
         {/* Header */}
-        <header className='pt-12 pb-4 px-6 bg-card border-b border-border-accent/30 flex items-center justify-between z-10 sticky top-0'>
+        <header className='pt-10 pb-2 px-6 bg-card border-b border-border-accent/30 flex items-center justify-between z-10 sticky top-0'>
           <div>
             <h1 className='flex items-center gap-2 text-xl font-bold'>
               <img
@@ -278,7 +291,7 @@ function MainApp({
 
         {/* Bottom Navigation */}
         <nav
-          className='absolute bottom-0 w-full bg-card border-t border-border px-6 py-4 flex justify-around pb-8 z-10'
+          className='absolute bottom-0 w-full bg-card border-t border-border px-6 py-2 flex justify-around pb-6 z-10'
           style={{ boxShadow: 'var(--nav-shadow)' }}
         >
           <button
@@ -314,6 +327,8 @@ function MainApp({
 
       {showSettings && (
         <SettingsModal
+          displayName={displayName}
+          onDisplayNameChange={handleDisplayNameChange}
           gender={myGender}
           onGenderChange={handleGenderChange}
           theme={theme}

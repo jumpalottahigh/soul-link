@@ -152,7 +152,7 @@ export function DrawingCanvas({ drawing, onChange, drawLabel }: Props) {
       <div
         ref={containerRef}
         className='w-full rounded-2xl overflow-hidden bg-card border border-border'
-        style={{ height: 150, touchAction: 'none' }}
+        style={{ aspectRatio: '2.2 / 1', touchAction: 'none' }}
       >
         <canvas
           ref={canvasRef}

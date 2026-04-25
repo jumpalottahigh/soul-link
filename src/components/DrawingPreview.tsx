@@ -68,7 +68,7 @@ export function DrawingPreview({ drawing }: Props) {
     <div
       ref={containerRef}
       className='w-full mt-2 rounded-2xl overflow-hidden'
-      style={{ height: 80 }}
+      style={{ aspectRatio: '2.2 / 1' }}
     >
       <canvas ref={canvasRef} className='w-full h-full' />
     </div>

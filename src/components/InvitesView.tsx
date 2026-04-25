@@ -55,13 +55,13 @@ export function InvitesView({ invites, userId, partnerId }: Props) {
               className='w-full bg-input border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-soft focus:outline-none focus:ring-2 focus:ring-ring transition-all'
             />
             {/* Quick Suggestions */}
-            <div className='flex gap-2 overflow-x-auto pb-2 mt-2 hide-scrollbar'>
+            <div className='flex flex-wrap gap-2 mt-2'>
               {SUGGESTIONS.map((sug, idx) => (
                 <button
                   key={idx}
                   type='button'
                   onClick={() => setNewActivity(sug)}
-                  className='whitespace-nowrap text-xs bg-accent-soft text-accent px-3 py-1.5 rounded-full hover:bg-accent-mid transition-colors'
+                  className='text-xs bg-accent-soft text-accent px-3 py-1.5 rounded-full hover:bg-accent-mid transition-colors'
                 >
                   {sug}
                 </button>

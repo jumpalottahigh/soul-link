@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { LogOut, X } from 'lucide-react'
 import { GENDER_OPTIONS, THEMES } from '../lib/types'
 import type { Gender, Theme } from '../lib/types'
 
 interface Props {
+  displayName: string
+  onDisplayNameChange: (name: string) => void
   gender: Gender
   onGenderChange: (gender: Gender) => void
   theme: Theme
@@ -12,6 +15,8 @@ interface Props {
 }
 
 export function SettingsModal({
+  displayName,
+  onDisplayNameChange,
   gender,
   onGenderChange,
   theme,
@@ -19,6 +24,15 @@ export function SettingsModal({
   onSignOut,
   onClose
 }: Props) {
+  const [name, setName] = useState(displayName)
+
+  function handleNameBlur() {
+    const trimmed = name.trim()
+    if (trimmed && trimmed !== displayName) {
+      onDisplayNameChange(trimmed)
+    }
+  }
+
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-6'>
       <div className='absolute inset-0 bg-black/40' onClick={onClose} />
@@ -31,6 +45,22 @@ export function SettingsModal({
           >
             <X size={18} />
           </button>
+        </div>
+
+        {/* Display Name */}
+        <div>
+          <span className='text-sm font-medium text-text-soft block mb-2'>
+            Display Name
+          </span>
+          <input
+            type='text'
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={handleNameBlur}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+            maxLength={24}
+            className='w-full bg-input border border-border rounded-xl px-4 py-3 text-sm text-text placeholder:text-text-soft focus:outline-none focus:ring-2 focus:ring-ring transition-all'
+          />
         </div>
 
         {/* Gender */}
