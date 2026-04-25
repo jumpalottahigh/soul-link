@@ -19,13 +19,12 @@ export interface Invite {
   sender: string
 }
 
-export const MOOD_OPTIONS: MoodOption[] = [
+export const DEFAULT_MOODS: MoodOption[] = [
   { emoji: '👩‍💻', label: 'Work Mode' },
-  { emoji: '🍓', label: 'Thinking of you' },
+  { emoji: '💕', label: 'Thinking of you' },
   { emoji: '😫', label: 'Stressed' },
   { emoji: '🔋', label: 'Low Battery' },
-  { emoji: '🥰', label: 'Feeling Loved' },
-  { emoji: '🏃‍♂️', label: 'Active' }
+  { emoji: '🥰', label: 'Feeling Loved' }
 ]
 
 export interface Point {
@@ -56,6 +55,7 @@ export interface Profile {
   gender: Gender
   partner_id: string | null
   invite_code: string | null
+  recent_moods: MoodOption[]
 }
 
 export const SUGGESTIONS = [

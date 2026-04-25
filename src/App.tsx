@@ -4,12 +4,20 @@ import type { MoodOption, Invite, Theme, Drawing, Gender } from './lib/types'
 import { get, set } from './lib/storage'
 import { supabase } from './lib/supabase'
 import { useAuth } from './contexts/AuthContext'
-import { updateMyMood, updateMyDrawing, updateMyGender, fetchInvites, mapDbInviteToInvite } from './lib/db'
+import {
+  updateMyMood,
+  updateMyDrawing,
+  updateMyGender,
+  fetchInvites,
+  mapDbInviteToInvite,
+  addToRecentMoods
+} from './lib/db'
 import { AuthScreen } from './components/AuthScreen'
 import { PairingScreen } from './components/PairingScreen'
 import { MoodView } from './components/MoodView'
 import { InvitesView } from './components/InvitesView'
 import { SettingsModal } from './components/SettingsModal'
+import { CustomMoodModal } from './components/CustomMoodModal'
 
 export default function App() {
   const { session, profile, loading } = useAuth()
@@ -54,6 +62,7 @@ function MainApp({
   const { user, profile, partnerProfile, signOut } = useAuth()
   const [activeTab, setActiveTab] = useState<'mood' | 'invites'>('mood')
   const [showSettings, setShowSettings] = useState(false)
+  const [showCustomMood, setShowCustomMood] = useState(false)
 
   // Gender state
   const [myGender, setMyGender] = useState<Gender>(profile!.gender ?? 'other')
@@ -83,6 +92,9 @@ function MainApp({
     emoji: partnerProfile!.mood_emoji,
     label: partnerProfile!.mood_label
   })
+  const [recentMoods, setRecentMoods] = useState<MoodOption[]>(
+    profile!.recent_moods ?? []
+  )
 
   // Drawing state — initialized from Supabase profile
   const [myDrawing, setMyDrawing] = useState<Drawing>(profile!.drawing ?? [])
@@ -97,7 +109,9 @@ function MainApp({
   useEffect(() => {
     if (!user?.id) return
     fetchInvites(user.id)
-      .then((rows) => setInvites(rows.map((r: any) => mapDbInviteToInvite(r, user.id))))
+      .then((rows) =>
+        setInvites(rows.map((r: any) => mapDbInviteToInvite(r, user.id)))
+      )
       .catch(console.error)
   }, [user?.id])
 
@@ -117,7 +131,10 @@ function MainApp({
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const mapped = mapDbInviteToInvite(payload.new, user.id)
-            setInvites((prev) => [mapped, ...prev.filter((i) => i.id !== mapped.id)])
+            setInvites((prev) => [
+              mapped,
+              ...prev.filter((i) => i.id !== mapped.id)
+            ])
           } else if (payload.eventType === 'UPDATE') {
             const mapped = mapDbInviteToInvite(payload.new, user.id)
             setInvites((prev) =>
@@ -135,8 +152,15 @@ function MainApp({
 
   // Mood change → optimistic update + DB write
   function handleMoodChange(mood: MoodOption) {
+    const updatedRecents = addToRecentMoods(recentMoods, mood)
     setMyMood(mood)
-    updateMyMood(user!.id, mood).catch(console.error)
+    setRecentMoods(updatedRecents)
+    updateMyMood(user!.id, mood, updatedRecents).catch(console.error)
+  }
+
+  function handleCustomMood(mood: MoodOption) {
+    setShowCustomMood(false)
+    handleMoodChange(mood)
   }
 
   // Drawing change → optimistic update + debounced DB write
@@ -186,8 +210,15 @@ function MainApp({
         {/* Header */}
         <header className='pt-12 pb-4 px-6 bg-card border-b border-border-accent/30 flex items-center justify-between z-10 sticky top-0'>
           <div>
-            <h1 className='text-xl font-bold bg-gradient-to-r from-gradient-from to-gradient-to bg-clip-text text-transparent'>
-              Soul Link
+            <h1 className='flex items-center gap-2 text-xl font-bold'>
+              <img
+                src='/favicon.png'
+                alt='Soul Link logo'
+                className='w-5 h-5 rounded-sm'
+              />
+              <span className='bg-gradient-to-r from-gradient-from to-gradient-to bg-clip-text text-transparent'>
+                Soul Link
+              </span>
             </h1>
             <p className='text-xs text-text-soft font-medium'>
               <em>
@@ -218,6 +249,8 @@ function MainApp({
               myMood={myMood}
               partnerMood={partnerMood}
               onMoodChange={handleMoodChange}
+              recentMoods={recentMoods}
+              onCustomMoodClick={() => setShowCustomMood(true)}
               myDrawing={myDrawing}
               partnerDrawing={partnerDrawing}
               onDrawingChange={handleDrawingChange}
@@ -264,7 +297,9 @@ function MainApp({
                 size={24}
                 className={activeTab === 'invites' ? 'fill-accent-soft' : ''}
               />
-              {invites.some((i) => i.status === 'pending' && i.sender === 'partner') && (
+              {invites.some(
+                (i) => i.status === 'pending' && i.sender === 'partner'
+              ) && (
                 <span className='absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-card' />
               )}
             </div>
@@ -281,6 +316,13 @@ function MainApp({
           onThemeChange={setTheme}
           onSignOut={signOut}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {showCustomMood && (
+        <CustomMoodModal
+          onClose={() => setShowCustomMood(false)}
+          onConfirm={handleCustomMood}
         />
       )}
     </div>

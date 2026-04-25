@@ -23,12 +23,32 @@ export async function fetchPartnerProfile(partnerId: string) {
   return data
 }
 
-export async function updateMyMood(userId: string, mood: MoodOption) {
+export async function updateMyMood(
+  userId: string,
+  mood: MoodOption,
+  recentMoods: MoodOption[]
+) {
   const { error } = await supabase
     .from('profiles')
-    .update({ mood_emoji: mood.emoji, mood_label: mood.label, updated_at: new Date().toISOString() })
+    .update({
+      mood_emoji: mood.emoji,
+      mood_label: mood.label,
+      recent_moods: recentMoods,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', userId)
   if (error) throw error
+}
+
+export function addToRecentMoods(
+  current: MoodOption[],
+  mood: MoodOption,
+  max = 5
+): MoodOption[] {
+  const filtered = current.filter(
+    (m) => !(m.emoji === mood.emoji && m.label === mood.label)
+  )
+  return [mood, ...filtered].slice(0, max)
 }
 
 export async function updateMyDrawing(userId: string, drawing: Drawing) {
@@ -84,14 +104,22 @@ export async function fetchInvites(userId: string) {
   return data
 }
 
-export async function createInvite(senderId: string, receiverId: string, activity: string, time: string) {
+export async function createInvite(
+  senderId: string,
+  receiverId: string,
+  activity: string,
+  time: string
+) {
   const { error } = await supabase
     .from('invites')
     .insert({ sender_id: senderId, receiver_id: receiverId, activity, time })
   if (error) throw error
 }
 
-export async function updateInviteStatus(inviteId: string, status: 'accepted' | 'declined') {
+export async function updateInviteStatus(
+  inviteId: string,
+  status: 'accepted' | 'declined'
+) {
   const { error } = await supabase
     .from('invites')
     .update({ status })
@@ -105,6 +133,6 @@ export function mapDbInviteToInvite(row: any, currentUserId: string): Invite {
     activity: row.activity,
     time: row.time,
     status: row.status,
-    sender: row.sender_id === currentUserId ? 'me' : 'partner',
+    sender: row.sender_id === currentUserId ? 'me' : 'partner'
   }
 }
