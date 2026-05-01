@@ -3,11 +3,36 @@ import { X } from 'lucide-react'
 import type { MoodOption } from '../lib/types'
 
 const EMOJI_GRID = [
-  '😊', '😍', '🥰', '😴', '😢', '😤',
-  '🤗', '😎', '🤔', '😩', '🥺', '😌',
-  '💕', '🔥', '✨', '💪', '🎉', '🌈',
-  '☕', '🍕', '🏠', '📚', '🎮', '🎵',
-  '🏃', '🧘', '💻', '🌙', '☀️', '🤒'
+  '😊',
+  '😍',
+  '🥰',
+  '😴',
+  '😢',
+  '😤',
+  '🤗',
+  '😎',
+  '🤔',
+  '😩',
+  '🥺',
+  '😌',
+  '💕',
+  '🔥',
+  '✨',
+  '💪',
+  '🎉',
+  '🌈',
+  '☕',
+  '🍕',
+  '🏠',
+  '📚',
+  '🎮',
+  '🎵',
+  '🏃',
+  '🧘',
+  '💻',
+  '🌙',
+  '☀️',
+  '🤒'
 ]
 
 interface Props {
@@ -28,7 +53,7 @@ export function CustomMoodModal({ onClose, onConfirm }: Props) {
   const [emoji, setEmoji] = useState('')
   const [label, setLabel] = useState('')
 
-  const canConfirm = emoji.trim().length > 0 && label.trim().length > 0
+  const canConfirm = emoji.trim().length > 0
 
   function handleConfirm() {
     if (!canConfirm) return

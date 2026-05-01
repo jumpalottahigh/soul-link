@@ -34,7 +34,26 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     set('theme', theme)
-  }, [theme])
+
+    const themeCardColors: Record<Theme, string> = {
+      default: '#ffffff',
+      dark: '#1e293b',
+      cute: '#fff1f6'
+    }
+    const themePageColors: Record<Theme, string> = {
+      default: '#f8fafc',
+      dark: '#0f172a',
+      cute: '#fdf2f8'
+    }
+    const color = session ? themeCardColors[theme] : themePageColors[theme]
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.name = 'theme-color'
+      document.head.appendChild(meta)
+    }
+    meta.content = color
+  }, [theme, session])
 
   if (loading) {
     return (
@@ -225,7 +244,7 @@ function MainApp({
     <div className='min-h-screen bg-page flex justify-center text-text font-sans'>
       <div className='w-full max-w-md bg-page relative h-screen flex flex-col shadow-2xl overflow-hidden sm:border-x sm:border-border'>
         {/* Header */}
-        <header className='pt-10 pb-2 px-6 bg-card border-b border-border-accent/30 flex items-center justify-between z-10 sticky top-0'>
+        <header className='pb-2 px-6 bg-card border-b border-border-accent/30 flex items-center justify-between z-10 sticky top-0' style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
           <div>
             <h1 className='flex items-center gap-2 text-xl font-bold'>
               <img
