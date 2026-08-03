@@ -19,6 +19,10 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  sendPasswordReset: (email: string) => Promise<string | null>
+  updatePassword: (newPassword: string) => Promise<string | null>
+  recoveryMode: boolean
+  exitRecoveryMode: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -34,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [partnerProfile, setPartnerProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [recoveryMode, setRecoveryMode] = useState(false)
 
   const user = session?.user ?? null
 
@@ -64,8 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s)
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true)
+      }
       if (s?.user) {
         loadProfile(s.user.id)
       } else {
@@ -99,10 +107,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null)
     setProfile(null)
     setPartnerProfile(null)
+    setRecoveryMode(false)
   }
 
   async function refreshProfile() {
     if (user) await loadProfile(user.id)
+  }
+
+  async function sendPasswordReset(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    })
+    return error?.message ?? null
+  }
+
+  async function updatePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) return error.message
+    setRecoveryMode(false)
+    return null
+  }
+
+  function exitRecoveryMode() {
+    setRecoveryMode(false)
   }
 
   return (
@@ -116,7 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signIn,
         signOut,
-        refreshProfile
+        refreshProfile,
+        sendPasswordReset,
+        updatePassword,
+        recoveryMode,
+        exitRecoveryMode
       }}
     >
       {children}

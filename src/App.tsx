@@ -14,6 +14,7 @@ import {
   addToRecentMoods
 } from './lib/db'
 import { AuthScreen } from './components/AuthScreen'
+import { ResetPasswordScreen } from './components/ResetPasswordScreen'
 import { PairingScreen } from './components/PairingScreen'
 import { MoodView } from './components/MoodView'
 import { InvitesView } from './components/InvitesView'
@@ -21,7 +22,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { CustomMoodModal } from './components/CustomMoodModal'
 
 export default function App() {
-  const { session, profile, partnerProfile, loading } = useAuth()
+  const { session, profile, partnerProfile, loading, recoveryMode } = useAuth()
 
   // Theme is always local
   const [theme, setTheme] = useState<Theme>(
@@ -67,6 +68,10 @@ export default function App() {
 
   if (!session) {
     return <AuthScreen />
+  }
+
+  if (recoveryMode) {
+    return <ResetPasswordScreen />
   }
 
   if (!profile?.partner_id || !partnerProfile) {
