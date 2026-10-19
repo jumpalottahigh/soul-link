@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 
 type Mode = 'login' | 'signup' | 'forgot'
 
@@ -19,7 +19,7 @@ export function AuthScreen() {
     setInfo(null)
     setSubmitting(true)
 
-    let err: string | null = null
+    let err: string | null
     if (mode === 'login') {
       err = await signIn(email, password)
     } else if (mode === 'signup') {

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Copy, Link } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/useAuth'
 import { generatePairCode, updateInviteCode, pairWithCode } from '../lib/db'
+import { errorMessage } from '../lib/errors'
 
 export function PairingScreen() {
   const { profile, user, refreshProfile } = useAuth()
@@ -17,8 +18,8 @@ export function PairingScreen() {
     try {
       await updateInviteCode(user.id, newCode)
       setCode(newCode)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(errorMessage(err))
     }
   }
 
@@ -41,8 +42,8 @@ export function PairingScreen() {
       } else {
         await refreshProfile()
       }
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(errorMessage(err))
     }
     setSubmitting(false)
   }

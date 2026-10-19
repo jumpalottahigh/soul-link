@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { MoodOption, Invite, Drawing, Gender } from './types'
+import type { PlannerEvent, Trip } from './trip/types'
 
 // --- Profiles ---
 
@@ -109,7 +110,7 @@ export async function fetchInvites(userId: string) {
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return data
+  return data as DbInvite[]
 }
 
 export async function createInvite(
@@ -135,12 +136,129 @@ export async function updateInviteStatus(
   if (error) throw error
 }
 
-export function mapDbInviteToInvite(row: any, currentUserId: string): Invite {
+export interface DbInvite {
+  id: string
+  sender_id: string
+  receiver_id: string
+  activity: string
+  time: string
+  status: Invite['status']
+}
+
+export function mapDbInviteToInvite(
+  row: DbInvite,
+  currentUserId: string
+): Invite {
   return {
     id: row.id,
     activity: row.activity,
     time: row.time,
     status: row.status,
     sender: row.sender_id === currentUserId ? 'me' : 'partner'
+  }
+}
+
+// --- Trip planner ---
+
+export interface DbTrip {
+  id: string
+  name: string
+  start_date: string
+  end_date: string
+}
+
+export interface DbTripEvent {
+  id: string
+  trip_id: string
+  title: string
+  date: string
+  start_minute: number
+  end_minute: number
+}
+
+export async function fetchTrips() {
+  const { data, error } = await supabase
+    .from('trips')
+    .select('*')
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data as DbTrip[]
+}
+
+export async function insertTrip(ownerId: string, trip: Trip) {
+  const { error } = await supabase.from('trips').insert({
+    id: trip.id,
+    owner_id: ownerId,
+    name: trip.name,
+    start_date: trip.startDate,
+    end_date: trip.endDate
+  })
+  if (error) throw error
+}
+
+export async function updateTrip(
+  tripId: string,
+  fields: Partial<Omit<Trip, 'id'>>
+) {
+  const { error } = await supabase
+    .from('trips')
+    .update({
+      ...(fields.name !== undefined && { name: fields.name }),
+      ...(fields.startDate !== undefined && { start_date: fields.startDate }),
+      ...(fields.endDate !== undefined && { end_date: fields.endDate }),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', tripId)
+  if (error) throw error
+}
+
+export async function deleteTrip(tripId: string) {
+  const { error } = await supabase.from('trips').delete().eq('id', tripId)
+  if (error) throw error
+}
+
+export function mapDbTrip(row: DbTrip): Trip {
+  return {
+    id: row.id,
+    name: row.name,
+    startDate: row.start_date,
+    endDate: row.end_date
+  }
+}
+
+export async function fetchTripEvents(tripId: string) {
+  const { data, error } = await supabase
+    .from('trip_events')
+    .select('*')
+    .eq('trip_id', tripId)
+  if (error) throw error
+  return data as DbTripEvent[]
+}
+
+export async function upsertTripEvent(tripId: string, event: PlannerEvent) {
+  const { error } = await supabase.from('trip_events').upsert({
+    id: event.id,
+    trip_id: tripId,
+    title: event.title,
+    date: event.date,
+    start_minute: event.startMinute,
+    end_minute: event.endMinute,
+    updated_at: new Date().toISOString()
+  })
+  if (error) throw error
+}
+
+export async function deleteTripEvent(id: string) {
+  const { error } = await supabase.from('trip_events').delete().eq('id', id)
+  if (error) throw error
+}
+
+export function mapDbTripEvent(row: DbTripEvent): PlannerEvent {
+  return {
+    id: row.id,
+    title: row.title,
+    date: row.date,
+    startMinute: row.start_minute,
+    endMinute: row.end_minute
   }
 }

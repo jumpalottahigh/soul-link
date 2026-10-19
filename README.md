@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# Soul Link
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mobile-first web app for two paired partners to share moods, small drawings, and date invites in real time, with a shared trip planner. Single-page React app; [Supabase](https://supabase.com) is the entire backend.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Mood**: set your mood (recent, default, or custom emoji) and see your partner's live. Draw a small doodle for your partner on a canvas.
+- **Invites**: send date ideas with a time, and accept or decline the ones you receive.
+- **Trip Planner**: plan multiple trips with your partner, switching between them with pills. Each trip has an hourly day-by-day grid; drag events to move them and pull the edges to resize. Changes sync in real time.
+- **Pairing**: link two accounts with a 6-character code.
+- **Themes**: Rose, Night, and Cute.
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React 19, TypeScript, Vite, Tailwind CSS v4, `lucide-react`, `interactjs`, `@supabase/supabase-js`.
 
-## Expanding the ESLint configuration
+## Setup
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Requires the Node version in `.nvmrc`.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm install
+cp .env.example .env.local   # then fill in your Supabase values
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open http://localhost:5173/.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Environment variables (Vite):
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+The Trip Planner schema is in [supabase/trip-planner.sql](supabase/trip-planner.sql). Run it in the Supabase SQL editor (it is idempotent, so re-running after updates is safe). The rest of the schema (`profiles`, `invites`, the `pair_with_code` RPC, RLS) lives in Supabase, not in this repo. Realtime must be enabled for `profiles`, `invites`, `trips` and `trip_events`.
+
+## Deploying
+
+- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your host's build environment, then run `npm run build` and serve `dist/`.
+- Run `supabase/trip-planner.sql` against the production Supabase project before releasing a version that uses it.
+- In Supabase Auth settings, add your production URL as the Site URL / redirect URL; password reset emails redirect to the app's origin.
+
+## Scripts
+
+- `npm run dev`: start the dev server
+- `npm run build`: type-check and build to `dist/`
+- `npm run lint`: run ESLint
+- `npm run preview`: preview the production build
+
+See [AGENTS.md](AGENTS.md) for architecture notes and conventions.

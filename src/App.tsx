@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Heart, CalendarClock, Settings } from 'lucide-react'
+import { Heart, CalendarClock, Plane, Settings } from 'lucide-react'
 import type { MoodOption, Invite, Theme, Drawing, Gender } from './lib/types'
 import { get, set } from './lib/storage'
 import { supabase } from './lib/supabase'
-import { useAuth } from './contexts/AuthContext'
+import { useAuth } from './contexts/useAuth'
 import {
   updateMyMood,
   updateMyDrawing,
@@ -13,11 +13,13 @@ import {
   mapDbInviteToInvite,
   addToRecentMoods
 } from './lib/db'
+import type { DbInvite } from './lib/db'
 import { AuthScreen } from './components/AuthScreen'
 import { ResetPasswordScreen } from './components/ResetPasswordScreen'
 import { PairingScreen } from './components/PairingScreen'
 import { MoodView } from './components/MoodView'
 import { InvitesView } from './components/InvitesView'
+import { TripPlanner } from './components/trip/TripPlanner'
 import { SettingsModal } from './components/SettingsModal'
 import { CustomMoodModal } from './components/CustomMoodModal'
 
@@ -47,7 +49,9 @@ export default function App() {
       cute: '#fdf2f8'
     }
     const color = session ? themeCardColors[theme] : themePageColors[theme]
-    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null
+    let meta = document.querySelector(
+      'meta[name="theme-color"]'
+    ) as HTMLMetaElement | null
     if (!meta) {
       meta = document.createElement('meta')
       meta.name = 'theme-color'
@@ -89,7 +93,9 @@ function MainApp({
   setTheme: (t: Theme) => void
 }) {
   const { user, profile, partnerProfile, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState<'mood' | 'invites'>('mood')
+  const [activeTab, setActiveTab] = useState<'mood' | 'invites' | 'trip'>(
+    'mood'
+  )
   const [showSettings, setShowSettings] = useState(false)
   const [showCustomMood, setShowCustomMood] = useState(false)
 
@@ -147,7 +153,7 @@ function MainApp({
     if (!user?.id) return
     fetchInvites(user.id)
       .then((rows) =>
-        setInvites(rows.map((r: any) => mapDbInviteToInvite(r, user.id)))
+        setInvites(rows.map((r) => mapDbInviteToInvite(r, user.id)))
       )
       .catch(console.error)
   }, [user?.id])
@@ -167,13 +173,13 @@ function MainApp({
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const mapped = mapDbInviteToInvite(payload.new, user.id)
+            const mapped = mapDbInviteToInvite(payload.new as DbInvite, user.id)
             setInvites((prev) => [
               mapped,
               ...prev.filter((i) => i.id !== mapped.id)
             ])
           } else if (payload.eventType === 'UPDATE') {
-            const mapped = mapDbInviteToInvite(payload.new, user.id)
+            const mapped = mapDbInviteToInvite(payload.new as DbInvite, user.id)
             setInvites((prev) =>
               prev.map((inv) => (inv.id === mapped.id ? mapped : inv))
             )
@@ -230,7 +236,10 @@ function MainApp({
         (payload) => {
           const p = payload.new
           if (p.mood_emoji !== undefined) {
-            setPartnerMood({ emoji: p.mood_emoji || '❓', label: p.mood_label || 'No mood yet' })
+            setPartnerMood({
+              emoji: p.mood_emoji || '❓',
+              label: p.mood_label || 'No mood yet'
+            })
           }
           if (p.drawing !== undefined) {
             setPartnerDrawing(p.drawing ?? [])
@@ -249,7 +258,10 @@ function MainApp({
     <div className='min-h-screen bg-page flex justify-center text-text font-sans'>
       <div className='w-full max-w-md bg-page relative h-screen flex flex-col shadow-2xl overflow-hidden sm:border-x sm:border-border'>
         {/* Header */}
-        <header className='pb-2 px-6 bg-card border-b border-border-accent/30 flex items-center justify-between z-10 sticky top-0' style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
+        <header
+          className='pb-2 px-6 bg-card border-b border-border-accent/30 flex items-center justify-between z-10 sticky top-0'
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}
+        >
           <div>
             <h1 className='flex items-center gap-2 text-xl font-bold'>
               <img
@@ -304,12 +316,14 @@ function MainApp({
                     : 'Draw for Partner'
               }
             />
-          ) : (
+          ) : activeTab === 'invites' ? (
             <InvitesView
               invites={invites}
               userId={user!.id}
               partnerId={profile!.partner_id!}
             />
+          ) : (
+            <TripPlanner />
           )}
         </main>
 
@@ -345,6 +359,17 @@ function MainApp({
               )}
             </div>
             <span className='text-[10px] font-medium'>Invites</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('trip')}
+            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'trip' ? 'text-accent' : 'text-text-soft hover:text-text'}`}
+          >
+            <Plane
+              size={24}
+              className={activeTab === 'trip' ? 'fill-accent-soft' : ''}
+            />
+            <span className='text-[10px] font-medium'>Trip Planner</span>
           </button>
         </nav>
       </div>

@@ -86,6 +86,15 @@ body {
   --color-active-shadow: 0 4px 12px rgba(192, 132, 252, 0.2);
 }
 
+/* Trip planner event colors; pastel so dark text reads on every theme */
+:root {
+  --event-color-1: #fcd34d;
+  --event-color-2: #bef264;
+  --event-color-3: #fdba74;
+  --event-color-4: #7dd3fc;
+  --event-color-5: #fda4af;
+}
+
 /* ── Register as Tailwind theme colors ─────────────── */
 
 @theme {
