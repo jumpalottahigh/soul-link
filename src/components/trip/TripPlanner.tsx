@@ -28,11 +28,14 @@ export function TripPlanner() {
     updateRange,
     retry
   } = useTripPlanner()
+  const activeTrip = trips.find((trip) => trip.id === activeTripId)
   const [editor, setEditor] = useState<{
     draft: EventDraft
     id?: string
   } | null>(null)
-  const [tripDialog, setTripDialog] = useState<'create' | 'rename' | null>(null)
+  const [tripDialog, setTripDialog] = useState<
+    'create' | 'rename' | 'dates' | null
+  >(null)
   const hidden =
     planner?.events.filter(
       (event) => event.date < planner.startDate || event.date > planner.endDate
@@ -42,7 +45,9 @@ export function TripPlanner() {
     if (!planner) {
       return error ? (
         <section className={cardClass}>
-          <h3 className='font-medium text-text'>This trip could not be loaded</h3>
+          <h3 className='font-medium text-text'>
+            This trip could not be loaded
+          </h3>
           <button className={secondaryButtonClass} onClick={retry}>
             Retry loading
           </button>
@@ -57,20 +62,8 @@ export function TripPlanner() {
     return (
       <>
         <PlannerHeader
-          key={`${planner.id}_${planner.startDate}_${planner.endDate}`}
           startDate={planner.startDate}
           endDate={planner.endDate}
-          onChange={updateRange}
-          onAdd={() =>
-            setEditor({
-              draft: {
-                title: 'New event',
-                date: planner.startDate,
-                startMinute: 9 * 60,
-                endMinute: 10 * 60
-              }
-            })
-          }
         />
         <div className='space-y-1 px-1 text-xs text-text-soft'>
           <p>
@@ -181,6 +174,7 @@ export function TripPlanner() {
             onSelect={selectTrip}
             onNew={() => setTripDialog('create')}
             onRename={() => setTripDialog('rename')}
+            onAdjustDates={() => setTripDialog('dates')}
             onDelete={deleteTrip}
           />
           {renderPlanner()}
@@ -189,10 +183,18 @@ export function TripPlanner() {
 
       {tripDialog && (
         <TripDialog
+          key={`${tripDialog}_${activeTripId}`}
           mode={tripDialog}
-          initialName={tripDialog === 'rename' ? planner?.name : ''}
+          initialName={tripDialog !== 'create' ? activeTrip?.name : ''}
+          initialStartDate={
+            tripDialog !== 'create' ? activeTrip?.startDate : undefined
+          }
+          initialEndDate={
+            tripDialog !== 'create' ? activeTrip?.endDate : undefined
+          }
           onCreate={createTrip}
           onRename={renameTrip}
+          onAdjustDates={updateRange}
           onClose={() => setTripDialog(null)}
         />
       )}

@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { addDays, isISODate, todayISO } from '../../lib/trip/dates'
 
 interface Props {
-  mode: 'create' | 'rename'
+  mode: 'create' | 'rename' | 'dates'
   initialName?: string
+  initialStartDate?: string
+  initialEndDate?: string
   onCreate: (name: string, startDate: string, endDate: string) => void
   onRename: (name: string) => void
+  onAdjustDates: (startDate: string, endDate: string) => boolean
   onClose: () => void
 }
 
@@ -16,20 +19,24 @@ const labelClass = 'flex flex-col gap-1.5 text-sm font-medium text-text-soft'
 export function TripDialog({
   mode,
   initialName = '',
+  initialStartDate,
+  initialEndDate,
   onCreate,
   onRename,
+  onAdjustDates,
   onClose
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(initialName)
-  const [start, setStart] = useState(() => todayISO())
-  const [end, setEnd] = useState(() => addDays(todayISO(), 6))
+  const [start, setStart] = useState(() => initialStartDate ?? todayISO())
+  const [end, setEnd] = useState(() => initialEndDate ?? addDays(todayISO(), 6))
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const dialog = dialogRef.current
     dialog?.showModal()
+    dialog?.querySelector<HTMLInputElement>('input')?.focus()
     nameRef.current?.select()
     return () => dialog?.close()
   }, [])
@@ -37,7 +44,7 @@ export function TripDialog({
   return (
     <dialog
       ref={dialogRef}
-      className='m-auto w-[min(380px,calc(100vw-48px))] max-h-[calc(100dvh-48px)] overflow-auto rounded-3xl border border-border-accent bg-card p-6 text-text shadow-2xl backdrop:bg-black/40'
+      className={`w-[min(380px,calc(100vw-48px))] overflow-auto rounded-3xl border border-border-accent bg-card p-6 text-text shadow-2xl backdrop:bg-black/40 ${mode !== 'create' ? 'mx-auto mb-auto mt-[calc(env(safe-area-inset-top)+1rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-32px)]' : 'm-auto max-h-[calc(100dvh-48px)]'}`}
       aria-labelledby='trip-dialog-title'
       onCancel={(event) => {
         event.preventDefault()
@@ -50,7 +57,7 @@ export function TripDialog({
         onSubmit={(event) => {
           event.preventDefault()
           const trimmed = name.trim()
-          if (trimmed.length < 1 || trimmed.length > 60) {
+          if (mode !== 'dates' && (trimmed.length < 1 || trimmed.length > 60)) {
             setError('Enter a trip name between 1 and 60 characters.')
             return
           }
@@ -63,30 +70,43 @@ export function TripDialog({
               )
               return
             }
-            onCreate(trimmed, start, end)
+            if (mode === 'dates') {
+              if (!onAdjustDates(start, end)) {
+                setError('Dates were not saved. Please try again.')
+                return
+              }
+            } else {
+              onCreate(trimmed, start, end)
+            }
           }
           onClose()
         }}
       >
         <h2 id='trip-dialog-title' className='text-base font-bold'>
-          {mode === 'create' ? 'New trip' : 'Rename trip'}
+          {mode === 'create'
+            ? 'New trip'
+            : mode === 'dates'
+              ? 'Adjust trip dates'
+              : 'Rename trip'}
         </h2>
-        <label className={labelClass}>
-          Trip name
-          <input
-            ref={nameRef}
-            className={inputClass}
-            autoFocus
-            value={name}
-            maxLength={60}
-            placeholder='e.g. Lisbon in May'
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        {mode === 'create' && (
+        {mode !== 'dates' && (
+          <label className={labelClass}>
+            Trip name
+            <input
+              ref={nameRef}
+              className={inputClass}
+              autoFocus
+              value={name}
+              maxLength={60}
+              placeholder='e.g. Lisbon in May'
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+        )}
+        {mode !== 'rename' && (
           <div className='flex gap-3'>
             <label className={`${labelClass} flex-1`}>
-              Start
+              Trip start
               <input
                 type='date'
                 className={inputClass}
@@ -95,7 +115,7 @@ export function TripDialog({
               />
             </label>
             <label className={`${labelClass} flex-1`}>
-              End
+              Trip end
               <input
                 type='date'
                 className={inputClass}

@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import type { MoodOption, Invite, Drawing, Gender } from './types'
 import type { PlannerEvent, Trip } from './trip/types'
+import type { BingoBoard, BingoCell, BingoMark } from './bingo'
 
 // --- Profiles ---
 
@@ -261,4 +262,69 @@ export function mapDbTripEvent(row: DbTripEvent): PlannerEvent {
     startMinute: row.start_minute,
     endMinute: row.end_minute
   }
+}
+
+export async function fetchBingo() {
+  const [boards, cells, marks] = await Promise.all([
+    supabase.from('bingo_boards').select('id, name').order('created_at'),
+    supabase.from('bingo_cells').select('*'),
+    supabase.from('bingo_marks').select('*')
+  ])
+  if (boards.error) throw boards.error
+  if (cells.error) throw cells.error
+  if (marks.error) throw marks.error
+  return {
+    boards: boards.data as BingoBoard[],
+    cells: cells.data as BingoCell[],
+    marks: marks.data as BingoMark[]
+  }
+}
+
+export async function createBingoBoard(
+  id: string,
+  name: string,
+  cellIds: string[]
+) {
+  const { error } = await supabase.rpc('create_bingo_board', {
+    board_id: id,
+    board_name: name,
+    cell_ids: cellIds
+  })
+  if (error) throw error
+}
+
+export async function renameBingoBoard(id: string, name: string) {
+  const { error } = await supabase
+    .from('bingo_boards')
+    .update({ name })
+    .eq('id', id)
+    .select('id')
+    .single()
+  if (error) throw error
+}
+
+export async function deleteBingoBoard(id: string) {
+  const { error } = await supabase
+    .from('bingo_boards')
+    .delete()
+    .eq('id', id)
+    .select('id')
+    .single()
+  if (error) throw error
+}
+
+export async function saveBingoCell(id: string, text: string) {
+  const { error } = await supabase.rpc('save_bingo_cell', {
+    target_cell: id,
+    cell_text: text
+  })
+  if (error) throw error
+}
+
+export async function setBingoMark(id: string, completed: boolean) {
+  const { error } = await supabase.rpc('set_bingo_mark', {
+    target_cell: id,
+    is_completed: completed
+  })
+  if (error) throw error
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Heart, CalendarClock, Plane, Settings } from 'lucide-react'
+import { Heart, CalendarClock, Plane, Settings, Grid3X3 } from 'lucide-react'
 import type { MoodOption, Invite, Theme, Drawing, Gender } from './lib/types'
 import { get, set } from './lib/storage'
 import { supabase } from './lib/supabase'
@@ -20,6 +20,7 @@ import { PairingScreen } from './components/PairingScreen'
 import { MoodView } from './components/MoodView'
 import { InvitesView } from './components/InvitesView'
 import { TripPlanner } from './components/trip/TripPlanner'
+import { BingoView } from './components/bingo/BingoView'
 import { SettingsModal } from './components/SettingsModal'
 import { CustomMoodModal } from './components/CustomMoodModal'
 
@@ -93,9 +94,9 @@ function MainApp({
   setTheme: (t: Theme) => void
 }) {
   const { user, profile, partnerProfile, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState<'mood' | 'invites' | 'trip'>(
-    'mood'
-  )
+  const [activeTab, setActiveTab] = useState<
+    'mood' | 'invites' | 'trip' | 'bingo'
+  >('mood')
   const [showSettings, setShowSettings] = useState(false)
   const [showCustomMood, setShowCustomMood] = useState(false)
 
@@ -322,8 +323,10 @@ function MainApp({
               userId={user!.id}
               partnerId={profile!.partner_id!}
             />
-          ) : (
+          ) : activeTab === 'trip' ? (
             <TripPlanner />
+          ) : (
+            <BingoView />
           )}
         </main>
 
@@ -370,6 +373,13 @@ function MainApp({
               className={activeTab === 'trip' ? 'fill-accent-soft' : ''}
             />
             <span className='text-[10px] font-medium'>Trip Planner</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('bingo')}
+            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'bingo' ? 'text-accent' : 'text-text-soft hover:text-text'}`}
+          >
+            <Grid3X3 size={24} />
+            <span className='text-[10px] font-medium'>Bingo</span>
           </button>
         </nav>
       </div>

@@ -46,7 +46,7 @@ export function EventEditor({
   return (
     <dialog
       ref={dialogRef}
-      className='m-auto w-[min(380px,calc(100vw-48px))] max-h-[calc(100dvh-48px)] overflow-auto rounded-3xl border border-border-accent bg-card p-6 text-text shadow-2xl backdrop:bg-black/40'
+      className='mx-auto mb-auto mt-[calc(env(safe-area-inset-top)+1rem)] w-[min(380px,calc(100vw-48px))] max-h-[calc(100dvh-env(safe-area-inset-top)-32px)] overflow-auto rounded-3xl border border-border-accent bg-card p-6 text-text shadow-2xl backdrop:bg-black/40'
       aria-labelledby='editor-title'
       onCancel={(event) => {
         event.preventDefault()
@@ -66,10 +66,7 @@ export function EventEditor({
           setError(failure)
           if (!failure) {
             if (onSave(fields, id)) onClose()
-            else
-              setError(
-                'Changes were not saved. Please try again.'
-              )
+            else setError('Changes were not saved. Please try again.')
           }
         }}
       >
@@ -165,10 +162,7 @@ export function EventEditor({
                   return
                 }
                 if (onDelete(id)) onClose()
-                else
-                  setError(
-                    'The event was not deleted. Please try again.'
-                  )
+                else setError('The event was not deleted. Please try again.')
               }}
             >
               {confirmDelete ? 'Confirm delete' : 'Delete'}
