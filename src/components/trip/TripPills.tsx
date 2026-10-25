@@ -67,11 +67,6 @@ export function TripPills({
               ? 'border-active-border bg-active-bg text-accent'
               : 'border-border bg-card text-text-soft hover:text-text'
           }`}
-          style={
-            trip.id === activeId
-              ? { boxShadow: 'var(--color-active-shadow)' }
-              : undefined
-          }
         >
           <button
             type='button'
