@@ -236,17 +236,17 @@ export function BingoView() {
                   aria-label={`${label}. ${players.map((player, index) => `${player.name}: ${completed[index] ? 'completed' : 'not completed'}`).join('. ')}. ${mode === 'edit' ? 'Edit item' : 'Toggle your checkmark'}`}
                   aria-pressed={mode === 'play' ? completed[0] : undefined}
                   disabled={bingo.busy || (mode === 'play' && !cell.text)}
-                  className={`relative flex aspect-[4/5] min-w-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border p-1 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default ${completed[0] ? 'border-accent bg-accent-soft' : completed[1] ? 'border-success-text bg-success' : 'border-border bg-card'} ${mode === 'edit' ? 'hover:border-accent' : ''}`}
+                  className={`flex aspect-[4/5] min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border p-0.5 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default ${completed[0] ? 'border-accent bg-accent-soft' : completed[1] ? 'border-success-text bg-success' : 'border-border bg-card'} ${mode === 'edit' ? 'hover:border-accent' : ''}`}
                   onClick={() => {
                     if (mode === 'edit')
                       setDialog({ kind: 'cell', id: cell.id, value: cell.text })
                     else void bingo.toggleCell(cell)
                   }}
                 >
-                  <span className='flex min-h-0 w-full items-center justify-center overflow-hidden'>
+                  <span className='flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden'>
                     {cell.text ? (
                       <span
-                        className={`w-full text-[11px] leading-tight font-medium [overflow-wrap:anywhere] ${hasMarks ? 'line-clamp-1 min-[390px]:line-clamp-2 min-[440px]:line-clamp-3' : 'line-clamp-3'}`}
+                        className={`w-full text-[11px] leading-[1.15] font-medium [overflow-wrap:anywhere] ${hasMarks ? 'line-clamp-3 min-[360px]:line-clamp-4' : 'line-clamp-4 min-[360px]:line-clamp-5'}`}
                       >
                         {cell.text}
                       </span>
@@ -260,7 +260,7 @@ export function BingoView() {
                   </span>
                   {hasMarks && (
                     <span
-                      className='absolute inset-x-1 bottom-1 flex h-4 items-center justify-center gap-0.5'
+                      className='flex h-4 shrink-0 items-center justify-center gap-0.5'
                       aria-hidden='true'
                     >
                       {players.map(
